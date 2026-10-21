@@ -118,8 +118,10 @@ class Engine {
 
   prepare(rgba, w, h) { return resizeRGBA(rgba, w, h, S, S); }
 
+  // ort.env.wasm.proxy hands each input buffer to a worker, which detaches it here. Always pass copies, so the
+  // image and the stored probability maps stay usable for the next click, undo and replay.
   async initialProb(imgSmall) {
-    const out = await this.unet.run({ image: new this.ort.Tensor("float32", imgSmall, [1, 3, S, S]) });
+    const out = await this.unet.run({ image: new this.ort.Tensor("float32", imgSmall.slice(), [1, 3, S, S]) });
     return Float32Array.from(out.prob.data);
   }
 
@@ -134,8 +136,8 @@ class Engine {
 
   async refineStep(imgSmall, prevProb, clicks, w, h) {
     const out = await this.refiner.run({
-      image: new this.ort.Tensor("float32", imgSmall, [1, 3, S, S]),
-      prev: new this.ort.Tensor("float32", prevProb, [1, 1, S, S]),
+      image: new this.ort.Tensor("float32", imgSmall.slice(), [1, 3, S, S]),
+      prev: new this.ort.Tensor("float32", prevProb.slice(), [1, 1, S, S]),
       points: this.pointsTensor(clicks, w, h),
     });
     return Float32Array.from(out.prob.data);
