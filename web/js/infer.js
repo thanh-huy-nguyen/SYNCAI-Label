@@ -97,9 +97,11 @@ async function loadFile(code, spec, onProgress) {
   return new Uint8Array(await blob.arrayBuffer());
 }
 
+// At most two models stay in memory (the current case's and the next case's), since each takes a few hundred MB.
 const engines = new Map();
+const MAX_ENGINES = 2;
 export async function getEngine(code, onProgress) {
-  if (engines.has(code)) return engines.get(code);
+  if (engines.has(code)) { const e = engines.get(code); engines.delete(code); engines.set(code, e); return e; }
   const ort = await loadOrt();
   const man = JSON.parse(await (await downloadModelFile(code, "manifest.json")).text());
   const prog = [0, 0], report = () => onProgress && onProgress((prog[0] * man.unet.size + prog[1] * man.refiner.size) / (man.unet.size + man.refiner.size));
@@ -110,6 +112,11 @@ export async function getEngine(code, onProgress) {
   const opts = { executionProviders: ["wasm"], graphOptimizationLevel: "all" };
   const eng = new Engine(ort, await ort.InferenceSession.create(u, opts), await ort.InferenceSession.create(r, opts));
   engines.set(code, eng);
+  while (engines.size > MAX_ENGINES) {
+    const [oldCode, old] = engines.entries().next().value;
+    engines.delete(oldCode);
+    try { old.unet.release(); old.refiner.release(); } catch (e) { /* freed with the page anyway */ }
+  }
   return eng;
 }
 

@@ -7,3 +7,6 @@ corrections/
 __pycache__/
 *.onnx
 *.pt
+
+# study design and review notes stay local until preregistration
+private/

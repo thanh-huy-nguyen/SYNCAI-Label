@@ -25,6 +25,13 @@ documents, and then correct AI segmentations with clicks. It runs on GitHub Page
 Clinicians never see the model id, the arm, the reference masks, or the label hidden in a case name. The browser reads a
 blinded view; model files sit under a random code; images have random names.
 
+## Database updates after the first setup
+
+If your project was created from an older `schema.sql`, run each file in `supabase/migrations/` once in the SQL editor, in
+order. `002_decision_event.sql` makes the active clock stop at the moment the clinician presses Accept or Flag, so rating
+time is never counted. The site still works without it (it falls back to a pause event), but the review, correction and
+verification split is then slightly less exact.
+
 ## One-time setup
 
 1. **Supabase.** Create a free project. In Authentication, turn off "Allow new users to sign up", and set the minimum

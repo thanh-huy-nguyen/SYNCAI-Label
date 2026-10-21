@@ -38,10 +38,13 @@ export async function signDocument(uid, doc, sha, typedName, pngBlob) {
 export async function signatureImage(path) { return must(await sb.storage.from("signatures").download(path)); }
 
 export async function progress() { return must(await sb.rpc("rpc_progress")); }
-export async function nextAssignment() {
-  const rows = must(await sb.from("my_assignments").select("*").in("status", ["pending", "in_progress"])
-    .order("batch_index").order("sequence_index").limit(1));
-  return rows[0] || null;
+export async function nextAssignments(n) {
+  return must(await sb.from("my_assignments").select("*").in("status", ["pending", "in_progress"])
+    .order("batch_index").order("sequence_index").limit(n));
+}
+export async function myAssignments() {
+  return must(await sb.from("my_assignments").select("assignment_id,phase,batch_index,sequence_index,status")
+    .order("batch_index").order("sequence_index"));
 }
 export const startSession = id => sb.rpc("rpc_start_session", { p_assignment: id }).then(must);
 export const logEvent = a => sb.rpc("rpc_log_event", {

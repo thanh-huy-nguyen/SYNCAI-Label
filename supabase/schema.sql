@@ -219,7 +219,7 @@ begin
     elsif e.event_type = 'undo' and jsonb_array_length(clicks) > 0 then
       clicks := clicks - (jsonb_array_length(clicks) - 1);
     elsif e.event_type = 'manual_edit' then manual := true;
-    elsif e.event_type = 'pause' then paused := true;
+    elsif e.event_type in ('pause','decision') then paused := true;
     elsif e.event_type = 'resume' then paused := false;
     end if;
     if e.mask_after_id is not null then mask_id := e.mask_after_id; end if;
@@ -291,14 +291,14 @@ begin
   select * into s from sessions where session_id = p_session and user_id = auth.uid() and session_end_utc is null
     for update;
   if not found then raise exception 'unknown or finished session' using errcode = 'P0001'; end if;
-  if p_type not in ('click','undo','manual_edit','reject','flag','pause','resume') then
+  if p_type not in ('click','undo','manual_edit','reject','flag','pause','resume','decision') then
     raise exception 'event type not allowed' using errcode = 'P0001'; end if;
   if p_type = 'click' and (p_sign not in ('positive','negative') or p_x is null or p_y is null) then
     raise exception 'bad click' using errcode = 'P0001'; end if;
   st := session_state(p_session);
   paused := (st->>'paused')::boolean;
   last_ts := (st->>'last_ts')::timestamptz;
-  if p_type = 'pause' then
+  if p_type in ('pause','decision') then
     if paused then return jsonb_build_object('ignored', true); end if;
     if p_backdate_s > 0 then ts := greatest(ts - make_interval(secs => least(p_backdate_s, 300)), last_ts); end if;
   elsif p_type = 'resume' then
@@ -349,11 +349,11 @@ begin
     if not paused and e.event_type <> 'session_start' then
       if not acted then rv := rv + dt;
       elsif e.event_type in ('click','undo','manual_edit') then cr := cr + dt;
-      elsif e.event_type in ('accept','reject','flag','session_end') then vf := vf + dt;
+      elsif e.event_type in ('accept','reject','flag','session_end','decision') then vf := vf + dt;
       else cr := cr + dt; end if;
     end if;
-    if e.event_type in ('click','manual_edit','reject','accept','flag') then acted := true; end if;
-    if e.event_type = 'pause' then paused := true; elsif e.event_type = 'resume' then paused := false; end if;
+    if e.event_type in ('click','manual_edit','reject','accept','flag','decision') then acted := true; end if;
+    if e.event_type in ('pause','decision') then paused := true; elsif e.event_type = 'resume' then paused := false; end if;
     if e.event_type = 'click' then signs := signs || (case e.click_sign when 'positive' then 1 else 0 end);
     elsif e.event_type = 'undo' and coalesce(array_length(signs, 1), 0) > 0 then signs := signs[1:array_length(signs, 1) - 1];
     end if;

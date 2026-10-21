@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("syncai-theme")||"dark"}catch(e){document.documentElement.dataset.theme="dark"}</script>
 <title>Segmentation Study</title><link rel="stylesheet" href="style.css"></head>
 <body>
 <div id="boot" class="card"><p class="small">Loading&hellip;</p></div>
@@ -56,34 +57,48 @@
     <span class="brand">Segmentation study</span><span class="pill" id="phase"></span>
     <span class="sp"></span>
     <span class="small" id="prog"></span><div id="bar"><i></i></div>
-    <span id="timer">0:00</span>
-    <button id="pause">Pause</button><button id="help">Instructions</button><button id="signout">Sign out</button>
+    <span id="timer" title="Active time on this case">0:00</span>
+    <button id="pause" title="Stops the timer. Take as long as you like.">Take a break</button>
+    <button id="help">Instructions</button><button id="theme">Light</button><button id="signout">Sign out</button>
   </div>
   <div id="main">
-    <div id="stage"><canvas id="cv"></canvas><div id="hint"></div><div id="busy"><span id="busytext">Loading</span></div></div>
-    <div id="side">
-      <h3>Correct with clicks</h3>
-      <div class="row"><button id="tpos" class="on"><span class="mark pos">+</span> Missing region</button><button id="tneg"><span class="mark neg">&minus;</span> False region</button></div>
-      <div class="row"><button id="undo">Undo last click</button><button id="reject">Needs more correction</button></div>
-      <div class="small" id="nclicks">0 clicks</div>
-      <h3>View</h3>
-      <div class="row"><button id="ov" class="on">Outline on</button><button id="fit">Reset zoom</button></div>
-      <h3>Decision</h3>
-      <button class="primary" id="accept">Accept mask</button>
-      <button id="manual">Manual correction</button>
-      <button id="flag" class="danger">Flag case (cannot correct)</button>
-      <div id="manualbox" style="display:none">
-        <h3>Manual correction</h3>
-        <div class="row"><button id="badd" class="on">Add</button><button id="berase">Erase</button></div>
-        <label class="small">Brush size <input type="range" id="brush" min="2" max="60" value="14"></label>
-        <button class="primary" id="mfinish">Finish manual correction</button>
+    <div id="tools">
+      <button id="tpos" class="pos on" title="Click where the outline missed the target (P)"><span class="ic">+</span>Include<kbd>P</kbd></button>
+      <button id="tneg" class="neg" title="Click where the outline covers something that is not the target (N)"><span class="ic">&minus;</span>Exclude<kbd>N</kbd></button>
+      <button id="undo" title="Undo the last click (Z)"><span class="ic">&#8630;</span>Undo<kbd>Z</kbd></button>
+      <hr>
+      <button id="tdraw" title="Draw the mask yourself (D). Clicks are turned off for this case."><span class="ic">&#9998;</span>Draw<kbd>D</kbd></button>
+      <button id="terase" title="Erase part of the mask (E)"><span class="ic">&#9003;</span>Erase<kbd>E</kbd></button>
+    </div>
+    <div id="center">
+      <div id="stage"><canvas id="cv"></canvas><div id="hint"></div><div id="busy"><span id="busytext">Loading</span></div></div>
+      <div id="actions">
+        <span class="small" id="nclicks">0 clicks</span><span class="grow"></span>
+        <div id="strip"></div>
+        <button id="flag" class="danger" title="The mask cannot be corrected or the image is unclear (F)">Flag case <kbd>F</kbd></button>
+        <button id="accept" class="primary" title="The outline is clinically acceptable (Enter)">Accept <kbd>Enter</kbd></button>
       </div>
+    </div>
+    <div id="side" class="panel">
+      <h3>Outline</h3>
+      <div class="line"><span>Show</span><button id="ov" class="on">On</button><button id="ghost" title="Dashed line: the model's first proposal (X)">Original</button></div>
+      <div class="line"><span>Fill</span><input type="range" id="fill" min="0" max="40" value="10"></div>
+      <div class="line"><span>Colour</span><div class="swatches" id="swatches"></div></div>
+      <p class="small">Hold <kbd>H</kbd> to hide the outline while you look at the image.</p>
+      <h3>Image</h3>
+      <div class="line"><span>Brightness</span><input type="range" id="bright" min="50" max="200" value="100"></div>
+      <div class="line"><span>Contrast</span><input type="range" id="contrast" min="50" max="250" value="100"></div>
+      <div class="row"><button id="dreset">Reset image</button><button id="fit" title="(0)">Reset zoom</button></div>
+      <div id="brushbox" style="display:none"><h3>Brush</h3><div class="line"><span>Size</span><input type="range" id="brush" min="6" max="90" value="26"></div></div>
+      <h3>Tips</h3>
+      <p class="small">Zoom with the wheel. Pan with right-drag, Shift-drag or Space-drag. Accept with <kbd>Enter</kbd>, then press a number for confidence and another for difficulty.</p>
     </div>
   </div>
 </div>
 
+<div id="gate"><div class="box"><h2 id="gtitle"></h2><div id="gbody" class="small" style="color:var(--ink)"></div><div class="row" style="margin-top:18px" id="gbtns"></div></div></div>
 <div id="modal"><div class="box" id="mbox"></div></div>
-<div id="paused"><div>Paused. The timer is stopped.</div><button class="primary" id="resume">Resume</button></div>
+<div id="paused"><div id="ptitle">On a break. The timer is stopped.</div><div class="big" id="pclock">0:00</div><div class="small" id="psub"></div><button class="primary" id="resume">Back to work</button></div>
 <div id="toast"></div>
 <script type="module" src="js/main.js"></script>
 </body></html>
