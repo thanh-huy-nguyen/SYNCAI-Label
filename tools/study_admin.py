@@ -224,23 +224,48 @@ def cmd_plan_stream(a, sb):
         sys.exit(f"need {a.batches * a.per_batch} cases in split '{a.split}', have {len(cs)}")
     random.Random(a.seed).shuffle(cs)
     for b in range(a.batches):
-        _new_assignments(sb, u, cs[b * a.per_batch:(b + 1) * a.per_batch], "correction_train", b + 1, None,
-                         block=f"batch{b + 1}", start=b * a.per_batch)
+        k = a.first_batch + b
+        _new_assignments(sb, u, cs[b * a.per_batch:(b + 1) * a.per_batch], "correction_train", k, None,
+                         block=f"batch{k}", start=b * a.per_batch)
     print(f"{a.batches} batches of {a.per_batch} planned for {a.clinician}; none released yet")
 
 
 def cmd_release_batch(a, sb):
     _need_model(sb, a.model)
     u = profile_by_cid(sb, a.clinician)
-    asg = [x for x in sb.select("assignments", {"user_id": f"eq.{u['id']}", "phase": "eq.correction_train"})]
+    asg = sb.select("assignments", {"user_id": f"eq.{u['id']}", "phase": "in.(correction_train,delineation)"})
     if a.batch > 1 and not a.force:
         open_prev = [x for x in asg if x["batch_index"] == a.batch - 1 and x["status"] != "done"]
         if open_prev:
             sys.exit(f"batch {a.batch - 1} is not finished ({len(open_prev)} open); use --force to override")
     todo = [x for x in asg if x["batch_index"] == a.batch and not x["released"]]
-    sb.update("assignments", {"user_id": f"eq.{u['id']}", "phase": "eq.correction_train", "batch_index": f"eq.{a.batch}",
-                              "released": "eq.false"}, {"released": True, "actual_model_id": a.model})
-    print(f"released {len(todo)} cases of batch {a.batch} to {a.clinician} with model {a.model}")
+    base = {"user_id": f"eq.{u['id']}", "batch_index": f"eq.{a.batch}", "released": "eq.false"}
+    sb.update("assignments", {**base, "phase": "eq.correction_train"}, {"released": True, "actual_model_id": a.model})
+    sb.update("assignments", {**base, "phase": "eq.delineation"}, {"released": True})  # drawing cases need no model
+    n_d = sum(x["phase"] == "delineation" for x in todo)
+    print(f"released {len(todo) - n_d} correction and {n_d} timed drawing cases of batch {a.batch} to {a.clinician} with model {a.model}")
+
+
+def cmd_plan_delineation(a, sb):
+    """Timed from-scratch drawing cases, mixed at random positions into the planned correction batches."""
+    u = profile_by_cid(sb, a.clinician)
+    cs = _free_cases(sb, a.split, u)
+    if len(cs) < a.batches * a.per_batch:
+        sys.exit(f"need {a.batches * a.per_batch} cases in split '{a.split}', have {len(cs)}")
+    rng = random.Random(a.seed)
+    rng.shuffle(cs)
+    for b in range(a.batches):
+        k = a.first_batch + b
+        rows = sb.select("assignments", {"user_id": f"eq.{u['id']}", "batch_index": f"eq.{k}", "phase": "in.(correction_train,delineation)"})
+        if any(r["released"] or r["status"] != "pending" for r in rows):
+            sys.exit(f"batch {k} is already released or started; plan drawing cases before releasing it")
+        _new_assignments(sb, u, cs[b * a.per_batch:(b + 1) * a.per_batch], "delineation", k, None, block=f"batch{k}:delineation", start=1000)
+        rows = sb.select("assignments", {"user_id": f"eq.{u['id']}", "batch_index": f"eq.{k}", "phase": "in.(correction_train,delineation)"})
+        order = [r["assignment_id"] for r in rows]
+        rng.shuffle(order)
+        for i, aid in enumerate(order):  # new positions are random across the whole batch
+            sb.update("assignments", {"assignment_id": f"eq.{aid}"}, {"sequence_index": i})
+        print(f"batch {k}: {len(rows)} cases in random order, {a.per_batch} of them timed drawing")
 
 
 def cmd_randomize_eval(a, sb):
@@ -384,9 +409,13 @@ def main():
     add("plan-pilot", cmd_plan_pilot, ("--clinician", dict(required=True)), ("--model", dict(required=True)),
         ("--split", dict(default="pilot")), ("--n", dict(type=int, default=15)), ("--seed", dict(type=int, default=0)))
     add("plan-stream", cmd_plan_stream, ("--clinician", dict(required=True)), ("--split", dict(default="correction")),
-        ("--batches", dict(type=int, default=5)), ("--per-batch", dict(type=int, default=20)), ("--seed", dict(type=int, default=0)))
+        ("--batches", dict(type=int, default=5)), ("--per-batch", dict(type=int, default=20)), ("--seed", dict(type=int, default=0)),
+        ("--first-batch", dict(type=int, default=1, help="batch number of the first new batch")))
     add("release-batch", cmd_release_batch, ("--clinician", dict(required=True)), ("--batch", dict(type=int, required=True)),
         ("--model", dict(required=True)), ("--force", dict(action="store_true")))
+    add("plan-delineation", cmd_plan_delineation, ("--clinician", dict(required=True)), ("--split", dict(default="delineation")),
+        ("--batches", dict(type=int, default=5)), ("--per-batch", dict(type=int, default=4)), ("--seed", dict(type=int, default=0)),
+        ("--first-batch", dict(type=int, default=1)))
     add("randomize-eval", cmd_randomize_eval, ("--clinician", dict(required=True)), ("--split", dict(default="eval")),
         ("--control", dict(required=True)), ("--treatment", dict(required=True)), ("--seed", dict(type=int, required=True)),
         ("--release", dict(action="store_true")))

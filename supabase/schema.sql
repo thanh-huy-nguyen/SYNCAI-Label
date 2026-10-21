@@ -66,7 +66,7 @@ create table if not exists assignments(
   used_for_training boolean not null default false,
   used_for_primary_analysis boolean not null default false,
   protocol_deviation_code text,
-  phase text not null check (phase in ('pilot','correction_train','randomized_eval','crossover')),
+  phase text not null check (phase in ('pilot','correction_train','randomized_eval','crossover','calibration','delineation')),
   batch_index int not null default 0,
   released boolean not null default false,
   status text not null default 'pending' check (status in ('pending','in_progress','done')));
@@ -177,8 +177,8 @@ select a.assignment_id, a.phase, a.batch_index, a.sequence_index, a.status,
        c.image_path, c.width, c.height, m.blind_code
 from assignments a
 join cases c on c.case_id = a.case_id
-join models m on m.model_id = a.actual_model_id
-where a.user_id = auth.uid() and a.released and a.actual_model_id is not null and i_signed();
+left join models m on m.model_id = a.actual_model_id
+where a.user_id = auth.uid() and a.released and (a.actual_model_id is not null or a.phase = 'delineation') and i_signed();
 grant select on my_assignments to authenticated;
 
 create or replace function rpc_progress() returns jsonb
@@ -291,7 +291,7 @@ begin
   select * into s from sessions where session_id = p_session and user_id = auth.uid() and session_end_utc is null
     for update;
   if not found then raise exception 'unknown or finished session' using errcode = 'P0001'; end if;
-  if p_type not in ('click','undo','manual_edit','reject','flag','pause','resume','decision') then
+  if p_type not in ('click','undo','manual_edit','reject','flag','pause','resume','decision','edit_undo') then
     raise exception 'event type not allowed' using errcode = 'P0001'; end if;
   if p_type = 'click' and (p_sign not in ('positive','negative') or p_x is null or p_y is null) then
     raise exception 'bad click' using errcode = 'P0001'; end if;
@@ -308,6 +308,8 @@ begin
   end if;
   if p_type in ('click','undo') and (st->>'manual')::boolean then
     raise exception 'manual editing started; clicks are disabled' using errcode = 'P0001'; end if;
+  if p_type = 'edit_undo' and not (st->>'manual')::boolean then
+    raise exception 'nothing to undo' using errcode = 'P0001'; end if;
   n := log_event_internal(p_session, p_type, ts, p_sign, p_x, p_y, p_before, p_after, p_latency, p_meta);
   return jsonb_build_object('event_order', n, 'ts', ts);
 end $$;
@@ -348,11 +350,11 @@ begin
     dt := greatest(0, extract(epoch from (e.event_timestamp_utc - prev)) - lat_prev / 1000.0);
     if not paused and e.event_type <> 'session_start' then
       if not acted then rv := rv + dt;
-      elsif e.event_type in ('click','undo','manual_edit') then cr := cr + dt;
+      elsif e.event_type in ('click','undo','manual_edit','edit_undo') then cr := cr + dt;
       elsif e.event_type in ('accept','reject','flag','session_end','decision') then vf := vf + dt;
       else cr := cr + dt; end if;
     end if;
-    if e.event_type in ('click','manual_edit','reject','accept','flag','decision') then acted := true; end if;
+    if e.event_type in ('click','manual_edit','edit_undo','reject','accept','flag','decision') then acted := true; end if;
     if e.event_type in ('pause','decision') then paused := true; elsif e.event_type = 'resume' then paused := false; end if;
     if e.event_type = 'click' then signs := signs || (case e.click_sign when 'positive' then 1 else 0 end);
     elsif e.event_type = 'undo' and coalesce(array_length(signs, 1), 0) > 0 then signs := signs[1:array_length(signs, 1) - 1];

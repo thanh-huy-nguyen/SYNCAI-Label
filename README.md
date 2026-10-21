@@ -30,7 +30,8 @@ blinded view; model files sit under a random code; images have random names.
 If your project was created from an older `schema.sql`, run each file in `supabase/migrations/` once in the SQL editor, in
 order. `002_decision_event.sql` makes the active clock stop at the moment the clinician presses Accept or Flag, so rating
 time is never counted. The site still works without it (it falls back to a pause event), but the review, correction and
-verification split is then slightly less exact.
+verification split is then slightly less exact. `003_delineation_task.sql` adds the timed from-scratch drawing task and undo
+for drawn edits; run it before planning drawing cases.
 
 ## One-time setup
 
@@ -70,6 +71,7 @@ python study_admin.py upload-model --id M0 --onnx-dir build/M0
 
 python study_admin.py plan-pilot  --clinician CLIN_A --model M0 --n 15
 python study_admin.py plan-stream --clinician CLIN_A --batches 5 --per-batch 20
+python study_admin.py plan-delineation --clinician CLIN_A --batches 5 --per-batch 4   # timed from-scratch drawing cases, mixed into each batch
 python study_admin.py release-batch --clinician CLIN_A --batch 1 --model M0
 ```
 
