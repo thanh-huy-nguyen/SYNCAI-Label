@@ -1,0 +1,9 @@
+# secrets and study data never go in the repository
+.env
+*.key
+export/
+build/
+corrections/
+__pycache__/
+*.onnx
+*.pt

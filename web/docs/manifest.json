@@ -1,0 +1,6 @@
+[
+  {"doc_id": "consent", "version": 1, "title": "Informed consent to participate in research", "required": true, "position": 1},
+  {"doc_id": "confidentiality", "version": 1, "title": "Data confidentiality and acceptable use agreement", "required": true, "position": 2},
+  {"doc_id": "attestation", "version": 1, "title": "Clinician qualification and conflict of interest attestation", "required": true, "position": 3},
+  {"doc_id": "instructions", "version": 1, "title": "Study instructions and annotation guidelines", "required": true, "position": 4}
+]

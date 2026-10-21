@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Segmentation Study</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<div id="boot" class="card"><p class="small">Loading&hellip;</p></div>
+
+<div id="screen-login" class="card" style="display:none">
+  <h1>Segmentation study</h1>
+  <p class="small">Sign in with the participant ID and password sent to you by the study team. Never enter patient names, record numbers or dates of birth anywhere in this site.</p>
+  <label>Participant ID</label><input id="lid" autocomplete="username" autocapitalize="off" spellcheck="false">
+  <label>Password</label><input id="lpw" type="password" autocomplete="current-password">
+  <p class="err" id="lerr"></p>
+  <button class="primary" id="lgo">Sign in</button>
+  <p class="small" style="margin-top:16px">Forgot your password? Contact the study team; they can reset it.</p>
+</div>
+
+<div id="screen-pw" class="card" style="display:none">
+  <h1>Choose a new password</h1>
+  <p class="small">This is your first sign-in. Choose a password of at least 10 characters that you do not use elsewhere.</p>
+  <label>New password</label><input id="pw1" type="password" autocomplete="new-password">
+  <label>Repeat new password</label><input id="pw2" type="password" autocomplete="new-password">
+  <p class="err" id="pwerr"></p>
+  <button class="primary" id="pwgo">Save password</button>
+</div>
+
+<div id="screen-sign" class="wrapsign" style="display:none">
+  <div id="signtop"><span class="brand">Documents to sign</span><span class="sp"></span><span class="small" id="signstep"></span></div>
+  <div class="signgrid">
+    <div class="doccol"><h2 id="doctitle"></h2><div id="docbody" class="doc"></div><div class="small" id="scrollhint">Scroll to the end of the document to continue.</div></div>
+    <div class="formcol">
+      <label>Type your full name as registered</label><input id="sname" autocomplete="off">
+      <p class="small" id="snamehint"></p>
+      <label class="chk"><input type="checkbox" id="sread" disabled> I have read this document and I agree to it.</label>
+      <label class="chk"><input type="checkbox" id="sesign" disabled> I intend my typed name and drawn signature below to be my legal electronic signature on this document.</label>
+      <label>Draw your signature</label>
+      <canvas id="sigpad"></canvas>
+      <div class="row"><button id="sclear">Clear</button><button class="primary" id="ssign" disabled>Sign and continue</button></div>
+      <p class="err" id="serr"></p>
+      <p class="small">Signing records your name, signature image, the time on the server, and a fingerprint of the exact text above.</p>
+    </div>
+  </div>
+</div>
+
+<div id="screen-home" class="card wide" style="display:none">
+  <h1 id="hname"></h1>
+  <p class="small" id="hmeta"></p>
+  <div id="hprog" class="hprog"></div>
+  <div class="row" style="margin:14px 0"><button class="primary" id="hstart">Continue to cases</button></div>
+  <h3>Signed documents</h3><div id="hsigs"></div>
+  <div class="row" style="margin-top:18px"><button id="hpw">Change password</button><button id="hout">Sign out</button></div>
+</div>
+
+<div id="app" style="display:none">
+  <div id="top">
+    <span class="brand">Segmentation study</span><span class="pill" id="phase"></span>
+    <span class="sp"></span>
+    <span class="small" id="prog"></span><div id="bar"><i></i></div>
+    <span id="timer">0:00</span>
+    <button id="pause">Pause</button><button id="help">Instructions</button><button id="signout">Sign out</button>
+  </div>
+  <div id="main">
+    <div id="stage"><canvas id="cv"></canvas><div id="hint"></div><div id="busy"><span id="busytext">Loading</span></div></div>
+    <div id="side">
+      <h3>Correct with clicks</h3>
+      <div class="row"><button id="tpos" class="on"><span class="mark pos">+</span> Missing region</button><button id="tneg"><span class="mark neg">&minus;</span> False region</button></div>
+      <div class="row"><button id="undo">Undo last click</button><button id="reject">Needs more correction</button></div>
+      <div class="small" id="nclicks">0 clicks</div>
+      <h3>View</h3>
+      <div class="row"><button id="ov" class="on">Outline on</button><button id="fit">Reset zoom</button></div>
+      <h3>Decision</h3>
+      <button class="primary" id="accept">Accept mask</button>
+      <button id="manual">Manual correction</button>
+      <button id="flag" class="danger">Flag case (cannot correct)</button>
+      <div id="manualbox" style="display:none">
+        <h3>Manual correction</h3>
+        <div class="row"><button id="badd" class="on">Add</button><button id="berase">Erase</button></div>
+        <label class="small">Brush size <input type="range" id="brush" min="2" max="60" value="14"></label>
+        <button class="primary" id="mfinish">Finish manual correction</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modal"><div class="box" id="mbox"></div></div>
+<div id="paused"><div>Paused. The timer is stopped.</div><button class="primary" id="resume">Resume</button></div>
+<div id="toast"></div>
+<script type="module" src="js/main.js"></script>
+</body></html>
